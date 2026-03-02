@@ -7,10 +7,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * EcoSort API 客户端
- * 与后端 Flask 服务器通信
- */
 
 public class ApiClient {
     private static final String BASE_URL = "http://YOUR_SERVER_IP:5000";
@@ -29,7 +25,6 @@ public class ApiClient {
     }
 
     /**
-     * 垃圾分类请求
      */
     public static class ClassifyRequest {
         @SerializedName("image")
@@ -44,7 +39,6 @@ public class ApiClient {
     }
 
     /**
-     * 垃圾分类响应
      */
     public static class ClassifyResponse {
         @SerializedName("class_name")
@@ -61,7 +55,6 @@ public class ApiClient {
     }
 
     /**
-     * 发送分类请求
      */
     public ClassifyResponse classify(String base64Image, Callback callback) {
         ClassifyRequest request = new ClassifyRequest(base64Image);
@@ -98,7 +91,6 @@ public class ApiClient {
     }
 
     /**
-     * 健康检查
      */
     public void healthCheck(Callback callback) {
         Request request = new Request.Builder()
