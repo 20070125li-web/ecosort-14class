@@ -1,6 +1,6 @@
 """
-EcoSort 训练入口脚本
-使用方式:
+EcoSort Training Entry Script
+Usage:
     python experiments/train_baseline.py --config configs/baseline_resnet50.yaml
 """
 
@@ -18,14 +18,14 @@ from src.train.trainer import Trainer
 
 
 def load_config(config_path: str) -> dict:
-    """加载 YAML 配置文件"""
+    """Load YAML configuration file"""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
 
 
 def create_model(config: dict):
-    """根据配置创建模型"""
+    """Create model architecture based on configuration"""
     model_type = config['model']['type']
 
     if model_type == 'resnet':
@@ -48,44 +48,47 @@ def create_model(config: dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='EcoSort Training')
+    parser = argparse.ArgumentParser(description='EcoSort Training Pipeline')
     parser.add_argument('--config', type=str, required=True,
-                        help='Path to config YAML file')
+                        help='Path to YAML configuration file')
     parser.add_argument('--data-root', type=str, default=None,
-                        help='Override data root directory')
+                        help='Override dataset root directory (overrides config)')
     parser.add_argument('--exp-name', type=str, default=None,
-                        help='Experiment name (overrides config)')
+                        help='Custom experiment name (overrides config value)')
     parser.add_argument('--no-wandb', action='store_true',
-                        help='Disable WandB logging')
+                        help='Disable Weights & Biases logging')
     parser.add_argument('--checkpoint-dir', type=str, default='checkpoints',
-                        help='Checkpoint directory')
+                        help='Base directory for saving model checkpoints')
 
     args = parser.parse_args()
 
-    # 加载配置
+    # Load base configuration
     config = load_config(args.config)
 
-    # 覆盖配置
+    # Override config values with command-line arguments
     if args.data_root:
         config['data']['root_dir'] = args.data_root
     if args.exp_name:
         config['experiment_name'] = args.exp_name
     else:
+        # Use config filename as default experiment name
         config['experiment_name'] = Path(args.config).stem
 
     print(f"\n{'='*60}")
     print(f"EcoSort Training: {config['experiment_name']}")
     print(f"{'='*60}\n")
 
-    # 打印配置
-    print("Configuration:")
+    # Print configuration for verification
+    print("Training Configuration:")
     print(yaml.dump(config, default_flow_style=False))
 
-    # 创建数据加载器
-    print("\nCreating dataloaders...")
+    # Create data loaders
+    print("\nInitializing data loaders...")
     try:
         config_class_names = config.get('data', {}).get('class_names')
+        # Detect strong augmentation (random erasing enabled)
         strong_aug = config.get('augmentation', {}).get('random_erasing_prob', 0) > 0
+        
         train_loader, val_loader = create_dataloaders(
             data_root=config['data']['root_dir'],
             batch_size=config['data']['batch_size'],
@@ -96,20 +99,23 @@ def main():
             strong_aug=strong_aug
         )
 
-        # 动态同步类别信息
+        # Dynamically sync dataset metadata with config
         inferred_class_names = train_loader.dataset.class_names
         config['model']['num_classes'] = len(inferred_class_names)
         config['data']['class_names'] = inferred_class_names
 
+        # Get class distribution for potential weighting
         class_counts = train_loader.dataset.get_class_distribution()
         ordered_counts = [class_counts[name] for name in inferred_class_names]
         config['data']['class_counts'] = ordered_counts
 
-        print(f"Detected {len(inferred_class_names)} classes")
+        print(f"Successfully detected {len(inferred_class_names)} classes")
         print(f"Class names: {inferred_class_names}")
+        print(f"Class distribution: {dict(zip(inferred_class_names, ordered_counts))}")
+        
     except Exception as e:
-        print(f"Error creating dataloaders: {e}")
-        print("\nPlease ensure your data is organized as:")
+        print(f"Error initializing data loaders: {str(e)}")
+        print("\nPlease ensure your dataset is organized in the following structure:")
         print("data/raw/")
         print("  ├── recyclable/")
         print("  ├── hazardous/")
@@ -117,12 +123,13 @@ def main():
         print("  └── other/")
         return
 
-    # 创建模型
-    print("\nCreating model...")
+    # Initialize model architecture
+    print("\nBuilding model architecture...")
     model = create_model(config)
 
-    # 创建训练器
-    print("\nInitializing trainer...")
+    # Initialize training manager
+    print("\nInitializing training manager...")
+    # Compile full trainer configuration
     trainer_config = dict(config['training'])
     trainer_config['data'] = config.get('data', {})
     trainer_config['loss'] = config.get('loss', {})
@@ -137,12 +144,14 @@ def main():
         use_wandb=not args.no_wandb
     )
 
-    # 开始训练
-    print("\nStarting training...\n")
+    # Start training process
+    print("\nStarting model training...\n")
     trainer.train()
 
-    print("\nTraining completed!")
-    print(f"Checkpoints saved to: {Path(args.checkpoint_dir) / config['experiment_name']}")
+    # Training completion
+    checkpoint_path = Path(args.checkpoint_dir) / config['experiment_name']
+    print("\nTraining completed successfully!")
+    print(f"Model checkpoints saved to: {checkpoint_path.absolute()}")
 
 
 if __name__ == '__main__':
