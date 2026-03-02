@@ -1,6 +1,6 @@
 # EcoSort EfficientNet-B3 Configuration
 
-# 模型配置
+# Model configuration
 model:
   type: "efficientnet"
   backbone: "efficientnet-b3"
@@ -9,7 +9,7 @@ model:
   dropout: 0.3
   drop_connect_rate: 0.2
 
-# 数据配置
+# Data configuration
 data:
   root_dir: "data/raw"
   img_size: 256
@@ -18,7 +18,7 @@ data:
   val_split: 0.2
   shuffle: true
 
-# 训练配置
+# Training configuration
 training:
   epochs: 50
   learning_rate: 0.001
@@ -29,12 +29,12 @@ training:
   early_stopping_patience: 10
   gradient_clip_val: 1.0
 
-# 损失函数
+# Loss configuration
 loss:
   type: "cross_entropy"
   label_smoothing: 0.1
 
-# 数据增强
+# Data augmentation
 augmentation:
   horizontal_flip_prob: 0.5
   vertical_flip_prob: 0.2
@@ -44,14 +44,15 @@ augmentation:
     contrast: 0.3
     saturation: 0.3
 
-# 检查点配置
+# Checkpoint configuration
 checkpoint:
   dir: "checkpoints"
   save_interval: 10
   save_best_only: true
 
-# WandB 配置
+# WandB configuration
 wandb:
   project: "ecosort-classification"
   entity: null
   tags: ["efficientnet", "b3"]
+
