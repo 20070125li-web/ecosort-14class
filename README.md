@@ -268,6 +268,6 @@ The project is not a single notebook experiment. It is a multi-stage system with
 
 ## Acknowledgments
 
-This project was developed as part of a student-led effort to bridge machine learning research and practical deployment. The work emphasizes reproducibility, iterative problem solving, and user-facing reliability.
+I built this project to bridge the gap between machine learning research and real-world deployment. Our focus wasn’t just on the models, but on making sure the code is reproducible and the system is actually reliable for users through constant iteration.
 
-If you are reviewing this repository for academic purposes, the figures in `docs/figures/admissions/` provide a compact overview of experimental outcomes and engineering decisions.
+If you’re reviewing this for academic purposes, please check out the figures in docs/figures/admissions/. They give a quick overview of our experimental results and the design choices we made along the way.
