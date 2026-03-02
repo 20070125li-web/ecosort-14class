@@ -1,6 +1,6 @@
 """
-EcoSort 模型评估脚本
-全面的模型评估和可视化
+EcoSort Model Evaluation Script
+Comprehensive model evaluation and visualization
 """
 
 import argparse
@@ -31,10 +31,10 @@ def evaluate_model(
     data_loader: DataLoader,
     device: torch.device
 ) -> dict:
-    """评估模型
+    """Evaluate model performance on test dataset
 
     Returns:
-        metrics: 包含各种评估指标的字典
+        metrics: Dictionary containing comprehensive evaluation metrics
     """
     model.eval()
     all_preds = []
@@ -54,18 +54,18 @@ def evaluate_model(
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
 
-    # 转换为 numpy 数组
+    # Convert to numpy arrays
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
     all_probs = np.array(all_probs)
 
-    # 计算指标
+    # Calculate aggregate metrics
     accuracy = accuracy_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds, average='macro')
     precision = precision_score(all_labels, all_preds, average='macro')
     recall = recall_score(all_labels, all_preds, average='macro')
 
-    # 每个类别的指标
+    # Per-class metrics
     class_names = TrashDataset.CLASS_NAMES
     report = classification_report(
         all_labels, all_preds,
@@ -93,7 +93,7 @@ def plot_confusion_matrix(
     class_names: list,
     save_path: str = None
 ):
-    """绘制混淆矩阵"""
+    """Plot confusion matrix visualization"""
     cm = confusion_matrix(labels, preds)
 
     plt.figure(figsize=(10, 8))
@@ -117,8 +117,9 @@ def plot_per_class_accuracy(
     report: dict,
     save_path: str = None
 ):
-    """绘制每个类别的准确率"""
-    class_names = list(report.keys())[:-3]  # 排除 'macro avg', 'weighted avg', 'accuracy'
+    """Plot per-class accuracy bar chart"""
+    # Exclude aggregate metrics (macro avg, weighted avg, accuracy)
+    class_names = [name for name in report.keys() if name not in ['macro avg', 'weighted avg', 'accuracy']]
     accuracies = [report[name]['precision'] for name in class_names]
 
     plt.figure(figsize=(10, 6))
@@ -129,7 +130,7 @@ def plot_per_class_accuracy(
     plt.xlabel('Class', fontsize=12)
     plt.xticks(rotation=45)
 
-    # 在柱子上显示数值
+    # Add value labels on top of bars
     for bar in bars:
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
@@ -139,7 +140,7 @@ def plot_per_class_accuracy(
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Saved per-class accuracy to {save_path}")
+        print(f"Saved per-class accuracy plot to {save_path}")
 
     plt.show()
 
@@ -148,7 +149,7 @@ def save_evaluation_report(
     metrics: dict,
     save_path: str
 ):
-    """保存评估报告为 JSON"""
+    """Save evaluation metrics to JSON file"""
     report = {
         'accuracy': float(metrics['accuracy']),
         'f1_macro': float(metrics['f1_macro']),
@@ -166,22 +167,22 @@ def save_evaluation_report(
 def main():
     parser = argparse.ArgumentParser(description='EcoSort Model Evaluation')
     parser.add_argument('--checkpoint', type=str, required=True,
-                        help='Path to model checkpoint')
+                        help='Path to model checkpoint file (.pth)')
     parser.add_argument('--data-root', type=str, default='data/raw',
-                        help='Data root directory')
+                        help='Root directory of dataset')
     parser.add_argument('--batch-size', type=int, default=32,
-                        help='Batch size')
+                        help='Batch size for evaluation')
     parser.add_argument('--img-size', type=int, default=256,
-                        help='Image size')
+                        help='Input image size (pixels)')
     parser.add_argument('--output-dir', type=str, default='checkpoints/evaluation',
-                        help='Output directory for results')
+                        help='Directory to save evaluation results')
     parser.add_argument('--model-type', type=str, default='resnet',
                         choices=['resnet', 'efficientnet'],
-                        help='Model type')
+                        help='Backbone model architecture type')
 
     args = parser.parse_args()
 
-    # 创建输出目录
+    # Create output directory if not exists
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -189,12 +190,12 @@ def main():
     print("EcoSort Model Evaluation")
     print(f"{'='*60}\n")
 
-    # 设备
+    # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # 加载数据
-    print("\nLoading data...")
+    # Load dataset
+    print("\nLoading test dataset...")
     test_dataset = TrashDataset(
         root_dir=args.data_root,
         transform=get_data_transforms('val', args.img_size),
@@ -208,38 +209,38 @@ def main():
         num_workers=4
     )
 
-    print(f"Test dataset size: {len(test_dataset)}")
+    print(f"Test dataset size: {len(test_dataset)} samples")
 
-    # 读取类别信息
+    # Get class information
     class_names = test_dataset.class_names
     num_classes = len(class_names)
 
-    # 创建模型
-    print("\nLoading model...")
+    # Initialize model
+    print("\nLoading model checkpoint...")
     if args.model_type == 'resnet':
         model = create_resnet_model(
             backbone='resnet50',
             num_classes=num_classes,
             pretrained=False
         )
-    else:
+    else:  # efficientnet
         model = create_efficientnet_model(
             backbone='efficientnet-b3',
             num_classes=num_classes,
             pretrained=False
         )
 
-    # 加载权重
+    # Load trained weights
     checkpoint = load_checkpoint(args.checkpoint, model)
     model = model.to(device)
 
-    # 评估
-    print("\nEvaluating model...")
+    # Run evaluation
+    print("\nRunning model evaluation...")
     metrics = evaluate_model(model, test_loader, device)
 
-    # 打印结果
+    # Print summary results
     print(f"\n{'='*60}")
-    print("Evaluation Results:")
+    print("Evaluation Results Summary")
     print(f"{'='*60}")
     print(f"Accuracy:  {metrics['accuracy']:.4f}")
     print(f"F1-Score:  {metrics['f1_macro']:.4f}")
@@ -247,17 +248,17 @@ def main():
     print(f"Recall:    {metrics['recall_macro']:.4f}")
     print(f"{'='*60}\n")
 
-    # 打印分类报告
-    print("Per-Class Metrics:")
+    # Print detailed per-class report
+    print("Per-Class Classification Report:")
     print(classification_report(
         metrics['labels'], metrics['predictions'],
         target_names=class_names
     ))
 
-    # 保存报告
+    # Save evaluation results
     save_evaluation_report(metrics, output_dir / 'evaluation_report.json')
 
-    # 绘制混淆矩阵
+    # Generate visualizations
     plot_confusion_matrix(
         metrics['labels'],
         metrics['predictions'],
@@ -265,13 +266,12 @@ def main():
         save_path=output_dir / 'confusion_matrix.png'
     )
 
-    # 绘制每类准确率
     plot_per_class_accuracy(
         metrics['classification_report'],
         save_path=output_dir / 'per_class_accuracy.png'
     )
 
-    print(f"\nEvaluation completed! Results saved to {output_dir}")
+    print(f"\nEvaluation completed successfully! All results saved to {output_dir}")
 
 
 if __name__ == '__main__':
