@@ -1,6 +1,7 @@
 """
 EcoSort Dataset Module
-支持动态类别与预切分目录的分类数据集实现
+Implementation of a classification dataset supporting dynamic classes 
+and pre-partitioned directory structures.
 """
 
 import os
@@ -15,14 +16,14 @@ import numpy as np
 
 
 class TrashDataset(Dataset):
-    """垃圾分类数据集
+    """Waste Classification Dataset
 
-    支持两种目录结构:
-    1) 未切分结构: root/class_name/*.jpg (通过 val_split 随机切分 train/val)
-    2) 已切分结构: root/train|val|test/class_name/*.jpg (直接按 split 读取)
+    Supports two directory structures:
+    1) Unstructured: root/class_name/*.jpg (Randomly split into train/val via val_split)
+    2) Structured: root/train|val|test/class_name/*.jpg (Loaded directly based on split)
     """
 
-    # 默认类别（向后兼容）
+    # Default classes for backward compatibility
     DEFAULT_CLASS_NAMES = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
     CLASS_NAMES = DEFAULT_CLASS_NAMES
 
@@ -37,11 +38,12 @@ class TrashDataset(Dataset):
     ):
         """
         Args:
-            root_dir: 数据集根目录，应包含 class_name/xxx.jpg 结构
-            transform: 图像变换
-            split: 'train', 'val', 或 'test'
-            val_split: 验证集比例
-            seed: 随机种子
+            root_dir: Dataset root directory containing class_name/xxx.jpg structure
+            transform: Image transformation pipeline
+            split: Target subset - 'train', 'val', or 'test'
+            val_split: Ratio of data to use for validation
+            seed: Random seed for reproducibility
+            class_names: Explicit list of class names
         """
         self.root_dir = Path(root_dir)
         self.transform = transform
@@ -56,18 +58,18 @@ class TrashDataset(Dataset):
 
         self._initialize_classes()
 
-        # 加载所有样本
+        # Load all dataset samples
         self._load_samples()
 
-        # 划分数据集
+        # Handle data partitioning
         if not self.using_pre_split:
             self._split_data(val_split, seed)
 
         print(f"[{split.upper()}] Loaded {len(self.samples)} samples "
-              f"from {len(self.class_names)} classes")
+              f"across {len(self.class_names)} classes")
 
     def _initialize_classes(self):
-        """初始化类别列表"""
+        """Initialize the class list and mapping"""
         if self.class_names is not None:
             self.class_names = list(self.class_names)
         else:
@@ -85,31 +87,31 @@ class TrashDataset(Dataset):
         self.class_to_idx = {name: idx for idx, name in enumerate(self.class_names)}
 
     def _load_samples(self):
-        """加载所有图像样本路径和标签"""
+        """Map all image file paths to their respective labels"""
         base_dir = self._split_root if self.using_pre_split else self.root_dir
 
         for class_name in self.class_names:
             class_dir = base_dir / class_name
             if not class_dir.exists():
-                print(f"Warning: {class_dir} does not exist, skipping...")
+                print(f"Warning: Directory {class_dir} not found. Skipping...")
                 continue
 
-            # 支持多种图像格式
+            # Support multiple image extensions
             for ext in ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']:
                 for img_path in class_dir.glob(ext):
                     self.samples.append(str(img_path))
                     self.targets.append(self.class_to_idx[class_name])
 
         if len(self.samples) == 0:
-            raise ValueError(f"No images found in {self.root_dir}")
+            raise ValueError(f"No valid image files found in {self.root_dir}")
 
     def _split_data(self, val_split: float, seed: int):
-        """划分训练/验证/测试集"""
+        """Partition data into training, validation, or test sets"""
         np.random.seed(seed)
         indices = np.arange(len(self.samples))
         np.random.shuffle(indices)
 
-        # 划分训练集和验证集
+        # Calculate split sizes
         val_size = int(len(indices) * val_split)
         train_indices = indices[val_size:]
         val_indices = indices[:val_size]
@@ -118,10 +120,10 @@ class TrashDataset(Dataset):
             selected_indices = train_indices
         elif self.split == 'val':
             selected_indices = val_indices
-        else:  # test - 使用全部数据
+        else:  # 'test' mode uses the full dataset indices
             selected_indices = indices
 
-        # 更新样本列表
+        # Update sample and target lists
         self.samples = [self.samples[i] for i in selected_indices]
         self.targets = [self.targets[i] for i in selected_indices]
 
@@ -132,17 +134,17 @@ class TrashDataset(Dataset):
         """
         Returns:
             image: (C, H, W) tensor
-            label: 整数标签 [0-3]
+            label: Integer label index
         """
         img_path = self.samples[idx]
         label = self.targets[idx]
 
-        # 加载图像
+        # Attempt to load the image
         try:
             image = Image.open(img_path).convert('RGB')
         except Exception as e:
-            print(f"Error loading {img_path}: {e}")
-            # 返回一个空白图像
+            print(f"Failed to load {img_path}: {e}")
+            # Fallback to a blank white image to avoid crashing the training loop
             image = Image.new('RGB', (256, 256), color='white')
 
         if self.transform:
@@ -151,7 +153,7 @@ class TrashDataset(Dataset):
         return image, label
 
     def get_class_distribution(self) -> Dict[str, int]:
-        """获取类别分布"""
+        """Return the count of samples per class"""
         distribution = {name: 0 for name in self.class_names}
         for label in self.targets:
             class_name = self.class_names[label]
@@ -164,17 +166,17 @@ def get_data_transforms(
     img_size: int = 256,
     strong_aug: bool = False
 ) -> transforms.Compose:
-    """获取数据变换管道
+    """Utility for building image transformation pipelines
 
     Args:
-        mode: 'train', 'val', 或 'test'
-        img_size: 目标图像尺寸
-        strong_aug: 是否使用强数据增强（用于42类细粒度分类）
+        mode: 'train', 'val', or 'test'
+        img_size: Target resolution for resizing
+        strong_aug: Enable advanced augmentation (recommended for 42-class fine-tuning)
 
     Returns:
-        transforms.Compose
+        transforms.Compose pipeline
     """
-    # ImageNet 标准化参数
+    # Standard ImageNet normalization parameters
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225]
@@ -182,7 +184,7 @@ def get_data_transforms(
 
     if mode == 'train':
         if strong_aug:
-            # 强数据增强 - 用于42类细粒度分类
+            # Advanced augmentation pipeline for fine-grained classification
             return transforms.Compose([
                 transforms.Resize((img_size, img_size)),
                 transforms.RandomHorizontalFlip(p=0.5),
@@ -193,10 +195,10 @@ def get_data_transforms(
                 transforms.RandomPerspective(distortion_scale=0.2, p=0.3),
                 transforms.ToTensor(),
                 normalize,
-                transforms.RandomErasing(p=0.2, scale=(0.02, 0.15)),  # 随机擦除
+                transforms.RandomErasing(p=0.2, scale=(0.02, 0.15)),
             ])
         else:
-            # 标准数据增强
+            # Standard training augmentation
             return transforms.Compose([
                 transforms.Resize((img_size, img_size)),
                 transforms.RandomHorizontalFlip(p=0.5),
@@ -208,7 +210,7 @@ def get_data_transforms(
                 normalize,
             ])
     else:
-        # 验证/测试时不做增强
+        # Static pipeline for validation and testing
         return transforms.Compose([
             transforms.Resize((img_size, img_size)),
             transforms.ToTensor(),
@@ -225,19 +227,19 @@ def create_dataloaders(
     class_names: Optional[List[str]] = None,
     strong_aug: bool = False
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """创建训练和验证数据加载器
+    """Factory function for creating Train and Validation DataLoaders
 
     Args:
-        data_root: 数据集根目录
-        batch_size: 批次大小
-        num_workers: 数据加载工作进程数
-        img_size: 图像尺寸
-        val_split: 验证集比例
-        class_names: 类别列表
-        strong_aug: 是否使用强数据增强（用于42类细粒度分类）
+        data_root: Path to dataset
+        batch_size: Number of samples per batch
+        num_workers: Data loading parallel processes
+        img_size: Input image resolution
+        val_split: Validation partition ratio
+        class_names: Explicit labels
+        strong_aug: Toggle for advanced augmentation
 
     Returns:
-        train_loader, val_loader
+        (train_loader, val_loader)
     """
     train_dataset = TrashDataset(
         root_dir=data_root,
@@ -276,7 +278,7 @@ def create_dataloaders(
 
 
 if __name__ == '__main__':
-    # 测试数据集
+    # Unit Testing
     dataset = TrashDataset(
         root_dir='data/raw',
         transform=get_data_transforms('train'),
@@ -286,7 +288,7 @@ if __name__ == '__main__':
     print(f"Dataset size: {len(dataset)}")
     print(f"Class distribution: {dataset.get_class_distribution()}")
 
-    # 测试数据加载
+    # Sample Verification
     img, label = dataset[0]
-    print(f"Image shape: {img.shape}, Label: {label}, "
-          f"Class: {dataset.CLASS_NAMES[label]}")
+    print(f"Image tensor shape: {img.shape}, Label index: {label}, "
+          f"Category: {dataset.class_names[label]}")
