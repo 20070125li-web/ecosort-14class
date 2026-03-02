@@ -1,14 +1,14 @@
-# EcoSort 数据集类别映射配置
-# 将各种外部数据集的类别映射到 EcoSort 4 类系统
+# EcoSort Dataset Category Mapping Configuration
+# Map categories from various external datasets to the EcoSort 4-class system
 
-# EcoSort 目标类别
+# EcoSort Target Categories
 target_classes:
-  - recyclable    # 可回收物
-  - hazardous     # 有害垃圾
-  - kitchen       # 厨余垃圾
-  - other         # 其他垃圾
+  - recyclable    # Recyclable waste
+  - hazardous     # Hazardous waste
+  - kitchen       # Kitchen waste / Food waste
+  - other         # Other waste / Residual waste
 
-# TrashNet 数据集映射 (6 -> 4)
+# TrashNet Dataset Mapping (6 -> 4)
 trashnet_mapping:
   cardboard: recyclable
   glass: recyclable
@@ -17,11 +17,11 @@ trashnet_mapping:
   plastic: recyclable
   trash: other
 
-# Garbage Classification 数据集映射
-# 常见类别: batteries, biological, brown-glass, cardboard, clothes,
+# Garbage Classification Dataset Mapping
+# Common categories: batteries, biological, brown-glass, cardboard, clothes,
             # green-glass, metal, paper, plastic, shoes, trash, white-glass
 garbage_classification_mapping:
-  # 可回收物
+  # Recyclable waste
   cardboard: recyclable
   paper: recyclable
   plastic: recyclable
@@ -29,29 +29,29 @@ garbage_classification_mapping:
   brown-glass: recyclable
   green-glass: recyclable
   white-glass: recyclable
-  clothes: recyclable  # 部分可回收
+  clothes: recyclable  # Partially recyclable
 
-  # 有害垃圾
+  # Hazardous waste
   batteries: hazardous
 
-  # 厨余垃圾
+  # Kitchen waste
   biological: kitchen
 
-  # 其他垃圾
+  # Other waste
   shoes: other
   trash: other
 
-# Waste Classification 数据集映射
-# 常见类别: organic, recyclable, hazardous, landfill
+# Waste Classification Dataset Mapping
+# Common categories: organic, recyclable, hazardous, landfill
 waste_classification_mapping:
   organic: kitchen
   recyclable: recyclable
   hazardous: hazardous
   landfill: other
 
-# 自定义映射规则
+# Custom Mapping Rules
 custom_rules:
-  # 如果类别名包含以下关键词，映射到对应类别
+  # Map to corresponding category if category name contains the following keywords
   keyword_mapping:
     recyclable:
       - recycle
