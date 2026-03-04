@@ -36,9 +36,17 @@ Many waste classification demos report high accuracy on simplified datasets but 
 
 Instead of optimizing only for one headline metric, EcoSort prioritizes robustness and deployment feasibility.
 
-# Zero-to-One Development & Methodology
+## Zero-to-One Development & Methodology
 
-Instead of directly adopting mature and widely used open-source object detection models such as YOLO for development, this project starts entirely from the bottom layer. Based on three representative networks: ResNet, EfficientNet, and Vision Transformer (ViT) derived from the Transformer architecture, an object detection model was independently constructed and trained through the full pipeline. The training data is a dedicated dataset constructed by manually screening massive publicly available online data and classifying it according to multi-dimensional principles, without using any off-the-shelf models or pre-trained weights throughout the process. Meanwhile, the project completed performance comparison and effect evaluation of the optimal models of different versions. Finally, the self-developed model achieved an overall performance of 94.6% on the validation set for object detection tasks, verifying the effectiveness of the architecture design and data construction.
+Rather than deploying off-the-shelf object detection solutions like YOLO, EcoSort was engineered entirely from scratch to ensure deep architectural control and robust learning.
+
+End-to-End Architecture: Independently constructed and trained detection pipelines utilizing ResNet, EfficientNet, and Vision Transformer (ViT) backbones.
+
+Zero Pre-trained Weights: Trained completely from scratch, eschewing any pre-trained weights to fully validate our training regimen.
+
+Proprietary Data Curation: Constructed a dedicated dataset by rigorously filtering and multi-dimensionally classifying raw, large-scale web data.
+
+Rigorous Benchmarking: Systematically evaluated multiple model variants, culminating in a custom model that achieves 94.6% performance on the validation set, proving the efficacy of our pipeline design.
 
 ---
 
